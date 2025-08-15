@@ -1,0 +1,23 @@
+{
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+  "css.customData": [".vscode/css_custom_data.json"],
+  "tailwindCSS.includeLanguages": {
+    "html": "html",
+    "javascript": "javascript",
+    "css": "css"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    "class[:]\\s*['\"`]([^'\"`]*)['\"`]",
+    "className[:]\\s*['\"`]([^'\"`]*)['\"`]"
+  ],
+  "json.schemaDownload.enable": false,
+  "json.validate.enable": true,
+  "json.schemas": [
+    {
+      "fileMatch": ["package.json"],
+      "url": "vscode://schemas/package"
+    }
+  ]
+}
