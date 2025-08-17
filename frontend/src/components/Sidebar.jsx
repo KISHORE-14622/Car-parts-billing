@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { 
   X, 
   Users,
@@ -7,6 +8,8 @@ import {
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
+  const { isAdmin } = useAuth();
+  
   if (!isOpen) return null;
 
   return (
@@ -37,15 +40,17 @@ const Sidebar = ({ isOpen, onClose }) => {
         <div className="flex-1 overflow-y-auto p-4">
           <nav className="space-y-2">
             
-            {/* Staff Management */}
-            <Link
-              to="/staff-management"
-              onClick={onClose}
-              className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors border border-gray-200 group"
-            >
-              <Users className="h-5 w-5 text-primary-600 group-hover:text-primary-700" />
-              <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Staff Management</span>
-            </Link>
+            {/* Staff Management - Admin Only */}
+            {isAdmin() && (
+              <Link
+                to="/staff-management"
+                onClick={onClose}
+                className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors border border-gray-200 group"
+              >
+                <Users className="h-5 w-5 text-primary-600 group-hover:text-primary-700" />
+                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Staff Management</span>
+              </Link>
+            )}
 
             {/* Settings */}
             <Link

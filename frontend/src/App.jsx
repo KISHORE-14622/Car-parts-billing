@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Products from './pages/Products';
@@ -29,6 +29,65 @@ const RootRoute = () => {
   return <Home />;
 };
 
+// Component to conditionally apply container classes based on route
+const MainContent = () => {
+  const location = useLocation();
+  const isStaffDashboard = location.pathname === '/staff';
+  
+  return (
+    <main className={isStaffDashboard ? "py-8 px-4" : "container mx-auto px-4 py-8"}>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<RootRoute />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/login" element={<Login />} />
+        
+        {/* Legacy scanner route - redirect to appropriate dashboard */}
+        <Route path="/scanner" element={<Scanner />} />
+        
+        {/* Protected Routes */}
+        <Route 
+          path="/admin" 
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/staff" 
+          element={
+            <ProtectedRoute allowedRoles={["admin", "staff"]}>
+              <StaffDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Staff Management - Admin only access */}
+        <Route 
+          path="/staff-management" 
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <StaffManagement />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Settings - Admin and Staff access */}
+        <Route 
+          path="/settings" 
+          element={
+            <ProtectedRoute allowedRoles={["admin", "staff"]}>
+              <Settings />
+            </ProtectedRoute>
+          } 
+        />
+      </Routes>
+    </main>
+  );
+};
+
 function App() {
   return (
     <AuthProvider>
@@ -36,56 +95,7 @@ function App() {
         <Router>
           <div className="min-h-screen bg-hero-pattern">
             <Navbar />
-            <main className="container mx-auto px-4 py-8">
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<RootRoute />} />
-                <Route path="/products" element={<Products />} />
-                <Route path="/product/:id" element={<ProductDetail />} />
-                <Route path="/login" element={<Login />} />
-                
-                {/* Legacy scanner route - redirect to appropriate dashboard */}
-                <Route path="/scanner" element={<Scanner />} />
-                
-                {/* Protected Routes */}
-                <Route 
-                  path="/admin" 
-                  element={
-                    <ProtectedRoute requiredRole="admin">
-                      <AdminDashboard />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/staff" 
-                  element={
-                    <ProtectedRoute allowedRoles={["admin", "staff"]}>
-                      <StaffDashboard />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                {/* Staff Management - Admin and Staff access */}
-                <Route 
-                  path="/staff-management" 
-                  element={
-                    <ProtectedRoute allowedRoles={["admin", "staff"]}>
-                      <StaffManagement />
-                    </ProtectedRoute>
-                  } 
-                />
-                
-                {/* Settings - Admin and Staff access */}
-                <Route 
-                  path="/settings" 
-                  element={
-                    <ProtectedRoute allowedRoles={["admin", "staff"]}>
-                      <Settings />
-                    </ProtectedRoute>
-                  } 
-                />
-              </Routes>
-            </main>
+            <MainContent />
           </div>
         </Router>
       </ProductProvider>

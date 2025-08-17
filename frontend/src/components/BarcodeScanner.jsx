@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/library';
 import { Camera, CameraOff, Loader2 } from 'lucide-react';
 
-const BarcodeScanner = ({ onScan, onError }) => {
+const BarcodeScanner = ({ onScan, onError, autoStart = true }) => {
   const [isScanning, setIsScanning] = useState(false);
   const [hasPermission, setHasPermission] = useState(null);
   const [devices, setDevices] = useState([]);
@@ -13,13 +13,17 @@ const BarcodeScanner = ({ onScan, onError }) => {
   useEffect(() => {
     codeReader.current = new BrowserMultiFormatReader();
     
-    // Get available video devices
-    const getDevices = async () => {
+    // Get available video devices and start scanning automatically
+    const initializeScanner = async () => {
       try {
         const videoDevices = await codeReader.current.listVideoInputDevices();
         setDevices(videoDevices);
         if (videoDevices.length > 0) {
           setSelectedDevice(videoDevices[0].deviceId);
+          // Auto-start scanning if enabled
+          if (autoStart) {
+            setTimeout(() => startScanning(), 500);
+          }
         }
       } catch (error) {
         console.error('Error getting video devices:', error);
@@ -27,12 +31,12 @@ const BarcodeScanner = ({ onScan, onError }) => {
       }
     };
 
-    getDevices();
+    initializeScanner();
 
     return () => {
       stopScanning();
     };
-  }, []);
+  }, [autoStart]);
 
   const startScanning = async () => {
     try {
@@ -45,7 +49,7 @@ const BarcodeScanner = ({ onScan, onError }) => {
       // Stop the test stream
       stream.getTracks().forEach(track => track.stop());
 
-      // Start barcode scanning
+      // Start barcode scanning with continuous scanning
       await codeReader.current.decodeFromVideoDevice(
         selectedDevice || undefined,
         videoRef.current,
@@ -54,7 +58,8 @@ const BarcodeScanner = ({ onScan, onError }) => {
             const barcode = result.getText();
             console.log('Barcode detected:', barcode);
             onScan?.(barcode);
-            stopScanning();
+            // Continue scanning instead of stopping
+            // stopScanning();
           }
           if (error && error.name !== 'NotFoundException') {
             console.error('Scanning error:', error);
@@ -86,15 +91,15 @@ const BarcodeScanner = ({ onScan, onError }) => {
 
   if (hasPermission === false) {
     return (
-      <div className="text-center p-8">
-        <CameraOff className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Camera Access Denied</h3>
-        <p className="text-gray-600 mb-4">
-          Please allow camera access to scan barcodes. You may need to refresh the page and grant permission.
+      <div className="text-center p-4">
+        <CameraOff className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+        <h3 className="text-sm font-medium text-gray-900 mb-1">Camera Access Denied</h3>
+        <p className="text-xs text-gray-600 mb-2">
+          Please allow camera access to scan barcodes.
         </p>
         <button
           onClick={() => window.location.reload()}
-          className="btn-primary"
+          className="btn-primary text-xs px-3 py-1"
         >
           Refresh Page
         </button>
@@ -103,17 +108,14 @@ const BarcodeScanner = ({ onScan, onError }) => {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Camera Selection */}
+    <div className="space-y-2">
+      {/* Camera Selection - Compact */}
       {devices.length > 1 && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Camera
-          </label>
           <select
             value={selectedDevice}
             onChange={(e) => handleDeviceChange(e.target.value)}
-            className="input"
+            className="input text-xs"
             disabled={isScanning}
           >
             {devices.map((device) => (
@@ -125,8 +127,8 @@ const BarcodeScanner = ({ onScan, onError }) => {
         </div>
       )}
 
-      {/* Video Preview */}
-      <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '16/9' }}>
+      {/* Compact Video Preview */}
+      <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '4/3', maxHeight: '200px' }}>
         <video
           ref={videoRef}
           className="w-full h-full object-cover"
@@ -136,8 +138,8 @@ const BarcodeScanner = ({ onScan, onError }) => {
         {!isScanning && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center text-white">
-              <Camera className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <p className="text-lg">Click "Start Scanning" to begin</p>
+              <Camera className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-xs">Scanner Ready</p>
             </div>
           </div>
         )}
@@ -151,40 +153,44 @@ const BarcodeScanner = ({ onScan, onError }) => {
             </div>
             
             {/* Corner guides */}
-            <div className="absolute top-4 left-4 w-8 h-8 border-l-2 border-t-2 border-red-500"></div>
-            <div className="absolute top-4 right-4 w-8 h-8 border-r-2 border-t-2 border-red-500"></div>
-            <div className="absolute bottom-4 left-4 w-8 h-8 border-l-2 border-b-2 border-red-500"></div>
-            <div className="absolute bottom-4 right-4 w-8 h-8 border-r-2 border-b-2 border-red-500"></div>
+            <div className="absolute top-2 left-2 w-4 h-4 border-l-2 border-t-2 border-red-500"></div>
+            <div className="absolute top-2 right-2 w-4 h-4 border-r-2 border-t-2 border-red-500"></div>
+            <div className="absolute bottom-2 left-2 w-4 h-4 border-l-2 border-b-2 border-red-500"></div>
+            <div className="absolute bottom-2 right-2 w-4 h-4 border-r-2 border-b-2 border-red-500"></div>
+            
+            {/* Active scanning indicator */}
+            <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded">
+              SCANNING
+            </div>
           </div>
         )}
       </div>
 
-      {/* Controls */}
-      <div className="flex justify-center space-x-4">
+      {/* Compact Controls */}
+      <div className="flex justify-center space-x-2">
         {!isScanning ? (
           <button
             onClick={startScanning}
-            className="btn-primary flex items-center space-x-2"
+            className="btn-primary text-xs px-3 py-1 flex items-center space-x-1"
             disabled={devices.length === 0}
           >
-            <Camera className="h-4 w-4" />
-            <span>Start Scanning</span>
+            <Camera className="h-3 w-3" />
+            <span>Start</span>
           </button>
         ) : (
           <button
             onClick={stopScanning}
-            className="btn-secondary flex items-center space-x-2"
+            className="btn-secondary text-xs px-3 py-1 flex items-center space-x-1"
           >
-            <CameraOff className="h-4 w-4" />
-            <span>Stop Scanning</span>
+            <CameraOff className="h-3 w-3" />
+            <span>Stop</span>
           </button>
         )}
       </div>
 
-      {/* Instructions */}
-      <div className="text-center text-sm text-gray-600">
-        <p>Position the barcode within the camera view.</p>
-        <p>The scanner will automatically detect and read the barcode.</p>
+      {/* Compact Instructions */}
+      <div className="text-center text-xs text-gray-600">
+        <p>Scanner active - position barcode in view</p>
       </div>
     </div>
   );
