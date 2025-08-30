@@ -4,7 +4,6 @@ import { useProducts } from '../context/ProductContext';
 import BarcodeScanner from '../components/BarcodeScanner';
 import CompactBarcodeInput from '../components/CompactBarcodeInput';
 import ShoppingCart from '../components/ShoppingCart';
-import CheckoutForm from '../components/CheckoutForm';
 import Receipt from '../components/Receipt';
 import SearchBar from '../components/SearchBar';
 import ManualSearchContainer from '../components/ManualSearchContainer';
@@ -24,7 +23,8 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  Filter
+  Filter,
+  Maximize2
 } from 'lucide-react';
 
 const StaffDashboard = () => {
@@ -52,10 +52,10 @@ const StaffDashboard = () => {
   
   // Cart and checkout states
   const [cartItems, setCartItems] = useState([]);
-  const [showCheckout, setShowCheckout] = useState(false);
   const [isProcessingSale, setIsProcessingSale] = useState(false);
   const [completedSale, setCompletedSale] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [showCart, setShowCart] = useState(true);
   
   // Products browsing states
   const [currentPage, setCurrentPage] = useState(1);
@@ -78,7 +78,18 @@ const StaffDashboard = () => {
 
       if (response.ok) {
         const product = await response.json();
-        setScannedProduct(product);
+        
+        // Automatically add to cart if product is in stock
+        if (product.stock > 0) {
+          addToCart(product);
+          // Product added silently to cart
+        } else {
+          // Show out of stock message
+          alert(`❌ ${product.name} is out of stock and cannot be added to cart.`);
+        }
+        
+        // Optional: Still set scannedProduct for display but don't show modal by default
+        // setScannedProduct(product);
       } else {
         const data = await response.json();
         alert(data.message || 'Product not found');
@@ -169,6 +180,20 @@ const StaffDashboard = () => {
     );
   };
 
+  const updateCartItemPrice = (itemId, newPrice) => {
+    setCartItems(prev => 
+      prev.map(item => 
+        item.id === itemId 
+          ? { 
+              ...item, 
+              product: { ...item.product, price: newPrice },
+              totalPrice: newPrice * item.quantity 
+            }
+          : item
+      )
+    );
+  };
+
   const removeFromCart = (itemId) => {
     setCartItems(prev => prev.filter(item => item.id !== itemId));
   };
@@ -211,7 +236,6 @@ const StaffDashboard = () => {
         const sale = await response.json();
         setCompletedSale(sale);
         setShowReceipt(true);
-        setShowCheckout(false);
         clearCart();
         setScannedProduct(null);
         
@@ -243,11 +267,11 @@ const StaffDashboard = () => {
   const cartTotals = calculateCartTotals();
 
   return (
-    <div className="w-full">
+    <div className="content-height-minus-nav flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 max-w-7xl mx-auto px-4">
+      <div className="flex items-center justify-between py-4 px-6 bg-white/80 backdrop-blur-sm border-b border-gray-200 flex-shrink-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Staff Dashboard</h1>
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Staff Dashboard</h1>
           <p className="text-gray-600">Welcome back, {user?.fullName}</p>
         </div>
         <button
@@ -255,29 +279,54 @@ const StaffDashboard = () => {
           className="btn-primary flex items-center space-x-2"
         >
           <Scan className="h-5 w-5" />
-          <span>Camera Scanner</span>
+          <span className="hidden sm:inline">Camera Scanner</span>
+          <span className="sm:hidden">Scan</span>
         </button>
       </div>
 
-      {/* Main Layout - Full Width Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 px-4">
-        {/* Left Content Area - Takes 3 columns on large screens for better full-width utilization */}
-        <div className="xl:col-span-3 space-y-8">
-          {/* Shopping Cart - Top Priority */}
-          <ShoppingCart
-            cartItems={cartItems}
-            onUpdateQuantity={updateCartItemQuantity}
-            onRemoveItem={removeFromCart}
-            onClearCart={clearCart}
-            subtotal={cartTotals.subtotal}
-            tax={cartTotals.tax}
-            discount={cartTotals.discount}
-            total={cartTotals.total}
-            horizontal={true}
-          />
+      {/* Main Layout - Responsive Grid */}
+      <div className="staff-dashboard-grid grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6 px-4 lg:px-6 py-4">
+        {/* Shopping Cart with Integrated Checkout - Left Column */}
+        {showCart ? (
+          <div className="staff-dashboard-left lg:col-span-1 xl:col-span-2 order-2 lg:order-1">
+            <ShoppingCart
+              cartItems={cartItems}
+              onUpdateQuantity={updateCartItemQuantity}
+              onUpdatePrice={updateCartItemPrice}
+              onRemoveItem={removeFromCart}
+              onClearCart={clearCart}
+              subtotal={cartTotals.subtotal}
+              tax={cartTotals.tax}
+              discount={cartTotals.discount}
+              total={cartTotals.total}
+              fullHeight={true}
+              onCheckout={handleCheckout}
+              isProcessing={isProcessingSale}
+              onClose={() => setShowCart(false)}
+              showCloseButton={true}
+            />
+          </div>
+        ) : (
+          /* Minimized Cart Button */
+          <div className="staff-dashboard-left lg:col-span-1 xl:col-span-2 order-2 lg:order-1">
+            <div className="card h-20 flex items-center justify-center">
+              <button
+                onClick={() => setShowCart(true)}
+                className="btn-primary flex items-center space-x-2"
+              >
+                <CartIcon className="h-5 w-5" />
+                <span>Show Cart ({cartItems.length} items)</span>
+                <Maximize2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
-          {/* Compact Barcode Scanner - Integrated into main content */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Right Content Area - Scanner Tools */}
+        <div className="staff-dashboard-right lg:col-span-1 xl:col-span-1 space-y-4 lg:space-y-6 order-1 lg:order-2">
+
+          {/* Compact Barcode Scanner */}
+          <div className="w-full">
             <CompactBarcodeInput
               onScan={handleBarcodeScanned}
               onError={(error) => {
@@ -285,40 +334,41 @@ const StaffDashboard = () => {
                 alert('Scanner error: ' + error);
               }}
               recentScans={[]}
-              shouldAutoFocus={!showCheckout}
+              shouldAutoFocus={true}
             />
-
           </div>
 
           {/* View Toggle */}
           <div className="flex space-x-2">
             <button
               onClick={() => setActiveView('scanner')}
-              className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+              className={`flex-1 lg:flex-none px-3 lg:px-4 py-2 rounded-lg flex items-center justify-center space-x-2 text-sm ${
                 activeView === 'scanner' 
                   ? 'bg-primary-600 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <Scan className="h-4 w-4" />
-              <span>Scanner Tools</span>
+              <span className="hidden sm:inline">Scanner Tools</span>
+              <span className="sm:hidden">Scanner</span>
             </button>
             <button
               onClick={() => setActiveView('products')}
-              className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
+              className={`flex-1 lg:flex-none px-3 lg:px-4 py-2 rounded-lg flex items-center justify-center space-x-2 text-sm ${
                 activeView === 'products' 
                   ? 'bg-primary-600 text-white' 
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <Package className="h-4 w-4" />
-              <span>Browse Products</span>
+              <span className="hidden sm:inline">Browse Products</span>
+              <span className="sm:hidden">Products</span>
             </button>
           </div>
 
           {/* Scanner Tools View */}
           {activeView === 'scanner' && (
-            <div className="grid grid-cols-1 gap-6">
+            <div className="space-y-4 lg:space-y-6">
               {/* Manual Search Card */}
               <div className="card">
                 <div className="card-header">
@@ -368,184 +418,178 @@ const StaffDashboard = () => {
 
           {/* Products Browse View */}
           {activeView === 'products' && (
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto">
               {/* Search and Filters */}
-              <SearchBar 
-                onSearch={(term) => {
-                  setCurrentPage(1);
-                  setContextSearchTerm(term);
-                }} 
-                onCategoryChange={(category) => {
-                  setCurrentPage(1);
-                  setSelectedCategory(category);
-                }} 
-              />
+              <div className="flex-shrink-0">
+                <SearchBar 
+                  onSearch={(term) => {
+                    setCurrentPage(1);
+                    setContextSearchTerm(term);
+                  }} 
+                  onCategoryChange={(category) => {
+                    setCurrentPage(1);
+                    setSelectedCategory(category);
+                  }} 
+                />
+              </div>
 
               {/* Products Grid */}
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
-                  <span className="ml-2">Loading products...</span>
-                </div>
-              ) : error ? (
-                <div className="text-center py-8">
-                  <div className="text-red-600 text-lg font-medium mb-2">Error loading products</div>
-                  <p className="text-gray-600 mb-4">{error}</p>
-                  <button
-                    onClick={() => fetchProducts(currentPage, itemsPerPage, contextSearchTerm, selectedCategory)}
-                    className="btn-primary"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              ) : products.length === 0 ? (
-                <div className="text-center py-8">
-                  <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-medium text-gray-900 mb-2">No products found</h3>
-                  <p className="text-gray-600">Try adjusting your search criteria.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-                  {products.map((product) => (
-                    <div key={product._id} className="card hover:shadow-lg transition-shadow">
-                      <div className="card-content">
-                        <div className="flex items-center space-x-4">
-                          {/* Product Image */}
-                          <div className="flex-shrink-0">
-                            <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                              {product.image ? (
-                                <img 
-                                  src={product.image} 
-                                  alt={product.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <Package className="h-6 w-6 text-gray-400" />
-                              )}
+              <div className="flex-1 overflow-y-auto">
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+                    <span className="ml-2">Loading products...</span>
+                  </div>
+                ) : error ? (
+                  <div className="text-center py-8">
+                    <div className="text-red-600 text-lg font-medium mb-2">Error loading products</div>
+                    <p className="text-gray-600 mb-4">{error}</p>
+                    <button
+                      onClick={() => fetchProducts(currentPage, itemsPerPage, contextSearchTerm, selectedCategory)}
+                      className="btn-primary"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : products.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-xl font-medium text-gray-900 mb-2">No products found</h3>
+                    <p className="text-gray-600">Try adjusting your search criteria.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {products.map((product) => (
+                      <div key={product._id} className="card hover:shadow-lg transition-shadow">
+                        <div className="card-content">
+                          <div className="flex items-center space-x-4">
+                            {/* Product Image */}
+                            <div className="flex-shrink-0">
+                              <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                                {product.image ? (
+                                  <img 
+                                    src={product.image} 
+                                    alt={product.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <Package className="h-6 w-6 text-gray-400" />
+                                )}
+                              </div>
                             </div>
-                          </div>
 
-                          {/* Product Details */}
-                          <div className="flex-grow min-w-0">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-grow">
-                                <div className="flex items-center space-x-2 mb-1">
-                                  <span className="badge-primary text-xs">
-                                    {typeof product.category === 'object' ? product.category?.name : product.category}
-                                  </span>
-                                </div>
-                                <h3 className="text-sm font-semibold text-gray-900 mb-1 truncate">
-                                  {product.name}
-                                </h3>
-                                <p className="text-xs text-gray-600 mb-2 line-clamp-2">
-                                  {product.description}
-                                </p>
-                                <div className="flex items-center justify-between">
-                                  <div className="text-lg font-bold text-primary-600">
-                                    ${product.price.toFixed(2)}
+                            {/* Product Details */}
+                            <div className="flex-grow min-w-0">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-grow">
+                                  <div className="flex items-center space-x-2 mb-1">
+                                    <span className="badge-primary text-xs">
+                                      {typeof product.category === 'object' ? product.category?.name : product.category}
+                                    </span>
                                   </div>
-                                  <div className={`text-xs px-2 py-1 rounded-full ${
-                                    product.stock > 10 
-                                      ? 'bg-green-100 text-green-800' 
-                                      : product.stock > 0 
-                                        ? 'bg-yellow-100 text-yellow-800'
-                                        : 'bg-red-100 text-red-800'
-                                  }`}>
-                                    {product.stock > 10 ? 'In Stock' : product.stock > 0 ? 'Low Stock' : 'Out of Stock'}
+                                  <h3 className="text-sm font-semibold text-gray-900 mb-1 truncate">
+                                    {product.name}
+                                  </h3>
+                                  <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                                    {product.description}
+                                  </p>
+                                  <div className="flex items-center justify-between">
+                                    <div className="text-lg font-bold text-primary-600">
+                                      ${product.price.toFixed(2)}
+                                    </div>
+                                    <div className={`text-xs px-2 py-1 rounded-full ${
+                                      product.stock > 10 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : product.stock > 0 
+                                          ? 'bg-yellow-100 text-yellow-800'
+                                          : 'bg-red-100 text-red-800'
+                                    }`}>
+                                      {product.stock > 10 ? 'In Stock' : product.stock > 0 ? 'Low Stock' : 'Out of Stock'}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                            
-                            {/* Action Buttons */}
-                            <div className="flex space-x-2 mt-3">
-                              <button 
-                                onClick={() => setScannedProduct(product)}
-                                className="btn-outline text-xs px-3 py-1 flex items-center space-x-1"
-                              >
-                                <Eye className="h-3 w-3" />
-                                <span>View</span>
-                              </button>
-                              <button 
-                                onClick={() => addToCart(product)}
-                                disabled={product.stock === 0}
-                                className={`text-xs px-3 py-1 flex items-center space-x-1 ${
-                                  product.stock === 0 
-                                    ? 'btn-secondary opacity-50 cursor-not-allowed' 
-                                    : 'btn-primary'
-                                }`}
-                              >
-                                <Plus className="h-3 w-3" />
-                                <span>Add</span>
-                              </button>
+                              
+                              {/* Action Buttons */}
+                              <div className="flex space-x-2 mt-3">
+                                <button 
+                                  onClick={() => setScannedProduct(product)}
+                                  className="btn-outline text-xs px-3 py-1 flex items-center space-x-1"
+                                >
+                                  <Eye className="h-3 w-3" />
+                                  <span>View</span>
+                                </button>
+                                <button 
+                                  onClick={() => addToCart(product)}
+                                  disabled={product.stock === 0}
+                                  className={`text-xs px-3 py-1 flex items-center space-x-1 ${
+                                    product.stock === 0 
+                                      ? 'btn-secondary opacity-50 cursor-not-allowed' 
+                                      : 'btn-primary'
+                                  }`}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                  <span>Add</span>
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
 
-              {/* Pagination */}
-              {!loading && !error && products.length > 0 && pagination.totalPages > 1 && (
-                <div className="flex items-center justify-center space-x-2 mt-6">
-                  <button
-                    onClick={() => setCurrentPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="btn-outline flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    <span>Previous</span>
-                  </button>
-                  
-                  <span className="px-4 py-2 text-sm text-gray-600">
-                    Page {currentPage} of {pagination.totalPages}
-                  </span>
-                  
-                  <button
-                    onClick={() => setCurrentPage(currentPage + 1)}
-                    disabled={currentPage === pagination.totalPages}
-                    className="btn-outline flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <span>Next</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
+                {/* Pagination */}
+                {!loading && !error && products.length > 0 && pagination.totalPages > 1 && (
+                  <div className="flex items-center justify-center space-x-2 mt-4 flex-shrink-0">
+                    <button
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="btn-outline flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm px-3 py-1"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      <span className="hidden sm:inline">Previous</span>
+                    </button>
+                    
+                    <span className="px-2 py-1 text-sm text-gray-600">
+                      {currentPage}/{pagination.totalPages}
+                    </span>
+                    
+                    <button
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage === pagination.totalPages}
+                      className="btn-outline flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm px-3 py-1"
+                    >
+                      <span className="hidden sm:inline">Next</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Right Column - Checkout Section - Always Visible */}
-        <div className="xl:col-span-1">
-          <div className="sticky top-6">
-            <CheckoutForm
-              cartItems={cartItems}
-              subtotal={cartTotals.subtotal}
-              onCheckout={handleCheckout}
-              isProcessing={isProcessingSale}
-            />
-          </div>
-        </div>
       </div>
 
       {/* Scanned Product Details */}
       {scannedProduct && (
-        <div className="card mt-8 max-w-7xl mx-auto px-4">
-          <div className="card-header">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-              <Package className="h-5 w-5 mr-2" />
-              Product Details
-            </h2>
-            <button
-              onClick={() => setScannedProduct(null)}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="card-content">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
+          <div className="relative top-4 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                <Package className="h-5 w-5 mr-2" />
+                Product Details
+              </h2>
+              <button
+                onClick={() => setScannedProduct(null)}
+                className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                title="Close"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Product Image */}
               <div className="flex justify-center">
@@ -709,6 +753,8 @@ const StaffDashboard = () => {
           onPrint={() => {
             console.log('Receipt printed');
           }}
+          autoPrint={true}
+          autoClose={false}
         />
       )}
 

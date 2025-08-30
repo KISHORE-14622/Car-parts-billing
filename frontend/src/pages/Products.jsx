@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
 import ProductCard from '../components/ProductCard';
 import SearchBar from '../components/SearchBar';
 import { Loader2, Package, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const Products = () => {
+  const navigate = useNavigate();
   const {
     products,
     loading,
@@ -243,7 +245,7 @@ const Products = () => {
                         </div>
                         <div className="space-y-2">
                           <button 
-                            onClick={() => window.location.href = `/products/${product._id}`}
+                            onClick={() => navigate(`/product/${product._id}`)}
                             className="btn-primary text-sm px-4 py-2 w-full"
                           >
                             View Details

@@ -243,6 +243,27 @@
   height: 300px;
 }
 
+/* Staff Dashboard Specific Styles */
+.staff-dashboard-container {
+  @apply flex flex-col;
+  height: calc(100vh - 4rem); /* Account for navbar height */
+  max-height: calc(100vh - 4rem);
+  overflow: hidden;
+}
+
+/* No scroll utility class for staff dashboard */
+.no-scroll {
+  @apply overflow-hidden;
+  height: 100%;
+  max-height: 100%;
+}
+
+.no-scroll * {
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+}
+
 /* Utility classes */
 .text-shadow {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -252,6 +273,98 @@
   border: 2px solid transparent;
   background: linear-gradient(white, white) padding-box,
               linear-gradient(135deg, #9333ea, #14b8a6) border-box;
+}
+
+/* Height management utilities */
+.viewport-height {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: visible; /* Changed from hidden to visible */
+}
+
+.viewport-height-minus-nav {
+  height: calc(100vh - 4rem); /* Navbar is 4rem tall (64px) */
+  max-height: calc(100vh - 4rem);
+  overflow: visible; /* Changed from hidden to visible */
+}
+
+.content-height-minus-nav {
+  height: calc(100vh - 4rem);
+  max-height: calc(100vh - 4rem);
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-main-content {
+  height: calc(100vh - 8rem); /* Account for navbar + header */
+  max-height: calc(100vh - 8rem);
+  overflow: hidden;
+}
+
+/* Staff dashboard grid container */
+.staff-dashboard-grid {
+  height: calc(100vh - 8rem); /* Account for navbar + header */
+  max-height: calc(100vh - 8rem);
+  overflow: hidden;
+  flex: 1;
+}
+
+/* Staff dashboard content areas */
+.staff-dashboard-left {
+  height: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.staff-dashboard-right {
+  height: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Prevent body scroll when staff dashboard is active but keep navbar visible */
+body.staff-dashboard-active {
+  overflow-y: auto; /* Changed from hidden to auto to allow navbar to be visible */
+  height: 100vh;
+  max-height: 100vh;
+}
+
+/* Ensure navbar stays visible and positioned correctly */
+nav {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  display: block !important;
+  visibility: visible !important;
+  flex-shrink: 0 !important;
+}
+
+/* Override any potential hiding of navbar on staff dashboard */
+body.staff-dashboard-active nav {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 50 !important;
+  display: block !important;
+  visibility: visible !important;
+  flex-shrink: 0 !important;
+}
+
+/* Ensure the main app container allows navbar to be visible */
+.staff-dashboard-app-container {
+  @apply flex flex-col;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+/* Fix for staff dashboard main content */
+.staff-dashboard-main {
+  @apply flex-1;
+  overflow: hidden;
 }
 
 /* Responsive enhancements */

@@ -149,7 +149,9 @@ const ProductDetail = () => {
         <div className="space-y-6">
           {/* Title and Category */}
           <div className="space-y-2">
-            <div className="badge-primary inline-block">{product.category}</div>
+            <div className="badge-primary inline-block">
+              {typeof product.category === 'object' ? product.category?.name : product.category}
+            </div>
             <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
             <p className="text-lg text-gray-600">{product.description}</p>
           </div>

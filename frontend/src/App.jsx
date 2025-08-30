@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
@@ -35,7 +35,7 @@ const MainContent = () => {
   const isStaffDashboard = location.pathname === '/staff';
   
   return (
-    <main className={isStaffDashboard ? "py-8 px-4" : "container mx-auto px-4 py-8"}>
+    <main className={isStaffDashboard ? "staff-dashboard-main" : "container mx-auto px-4 py-8"}>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<RootRoute />} />
@@ -89,14 +89,37 @@ const MainContent = () => {
 };
 
 function App() {
+  const AppContent = () => {
+    const location = useLocation();
+    const isStaffDashboard = location.pathname === '/staff';
+    
+    // Add/remove body class for staff dashboard
+    useEffect(() => {
+      if (isStaffDashboard) {
+        document.body.classList.add('staff-dashboard-active');
+      } else {
+        document.body.classList.remove('staff-dashboard-active');
+      }
+      
+      // Cleanup on unmount
+      return () => {
+        document.body.classList.remove('staff-dashboard-active');
+      };
+    }, [isStaffDashboard]);
+    
+    return (
+      <div className={isStaffDashboard ? "staff-dashboard-app-container bg-hero-pattern" : "min-h-screen bg-hero-pattern"}>
+        <Navbar />
+        <MainContent />
+      </div>
+    );
+  };
+
   return (
     <AuthProvider>
       <ProductProvider>
         <Router>
-          <div className="min-h-screen bg-hero-pattern">
-            <Navbar />
-            <MainContent />
-          </div>
+          <AppContent />
         </Router>
       </ProductProvider>
     </AuthProvider>

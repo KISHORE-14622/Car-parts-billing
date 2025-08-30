@@ -19,7 +19,9 @@ import {
   DollarSign,
   TrendingUp,
   Calendar,
-  ShoppingCart as ShoppingCartIcon
+  ShoppingCart as ShoppingCartIcon,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -56,6 +58,7 @@ const AdminDashboard = () => {
   });
 
   const [revenueLoading, setRevenueLoading] = useState(false);
+  const [monthlyRevenueExpanded, setMonthlyRevenueExpanded] = useState(false);
 
   const [productForm, setProductForm] = useState({
     name: '',
@@ -404,65 +407,96 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Monthly Revenue Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+      {/* Main Dashboard Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Side - Main Content Area */}
+        <div className="space-y-6">
+          {/* You can add other dashboard components here */}
           <div className="card">
-            <div className="card-header flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Monthly Revenue ({monthlyRevenue.year})</h2>
-              <div className="flex items-center space-x-2">
+            <div className="card-header">
+              <h2 className="text-lg font-semibold text-gray-900">Dashboard Analytics</h2>
+            </div>
+            <div className="card-content">
+              <div className="text-center py-8">
+                <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">Additional analytics and charts can be added here</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side - Revenue, Top Products and Inventory Stats */}
+        <div className="space-y-6">
+          {/* Monthly Revenue Dropdown */}
+          <div className="card">
+            <div className="card-header">
+              <button
+                onClick={() => setMonthlyRevenueExpanded(!monthlyRevenueExpanded)}
+                className="w-full flex items-center justify-between text-left"
+              >
+                <h2 className="text-lg font-semibold text-gray-900">Monthly Revenue ({monthlyRevenue.year})</h2>
+                {monthlyRevenueExpanded ? (
+                  <ChevronUp className="h-5 w-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-500" />
+                )}
+              </button>
+            </div>
+            <div className="card-content">
+              {/* Always show summary */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="text-center p-3 bg-green-50 rounded-lg">
+                  <p className="text-xs text-green-600 font-medium">Total Revenue</p>
+                  <p className="text-lg font-bold text-green-900">${monthlyRevenue.totalYearRevenue.toFixed(2)}</p>
+                </div>
+                <div className="text-center p-3 bg-blue-50 rounded-lg">
+                  <p className="text-xs text-blue-600 font-medium">Total Sales</p>
+                  <p className="text-lg font-bold text-blue-900">{monthlyRevenue.totalYearSales}</p>
+                </div>
+              </div>
+
+              {/* Year selector */}
+              <div className="mb-4">
                 <select
                   value={monthlyRevenue.year}
                   onChange={(e) => fetchMonthlyRevenue(parseInt(e.target.value))}
-                  className="text-sm border border-gray-300 rounded-md px-2 py-1"
+                  className="w-full text-sm border border-gray-300 rounded-md px-3 py-2"
                 >
                   {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
                     <option key={year} value={year}>{year}</option>
                   ))}
                 </select>
               </div>
-            </div>
-            <div className="card-content">
-              {revenueLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
-                  <span className="ml-2">Loading revenue data...</span>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <p className="text-sm text-green-600 font-medium">Total Revenue</p>
-                      <p className="text-2xl font-bold text-green-900">${monthlyRevenue.totalYearRevenue.toFixed(2)}</p>
+
+              {/* Expandable monthly details */}
+              {monthlyRevenueExpanded && (
+                <div className="border-t pt-4">
+                  {revenueLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-primary-600" />
+                      <span className="ml-2 text-sm">Loading...</span>
                     </div>
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-blue-600 font-medium">Total Sales</p>
-                      <p className="text-2xl font-bold text-blue-900">{monthlyRevenue.totalYearSales}</p>
+                  ) : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {monthlyRevenue.monthlyData.map((month, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded text-sm">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
+                            <span className="font-medium text-gray-900">{month.month}</span>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <span className="text-xs text-gray-600">{month.totalSales} sales</span>
+                            <span className="font-bold text-gray-900">${month.totalRevenue.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    {monthlyRevenue.monthlyData.map((month, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-3 h-3 bg-primary-600 rounded-full"></div>
-                          <span className="font-medium text-gray-900">{month.month}</span>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <span className="text-sm text-gray-600">{month.totalSales} sales</span>
-                          <span className="font-bold text-gray-900">${month.totalRevenue.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Top Products and Inventory Stats */}
-        <div className="space-y-6">
           {/* Top Products */}
           <div className="card">
             <div className="card-header">

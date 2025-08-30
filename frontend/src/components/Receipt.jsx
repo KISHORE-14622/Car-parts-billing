@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Receipt as ReceiptIcon, 
   Printer, 
@@ -7,23 +7,66 @@ import {
   Calendar,
   User,
   CreditCard,
-  Package
+  Package,
+  Check,
+  Settings
 } from 'lucide-react';
 
 const Receipt = ({ 
   sale, 
   onClose, 
-  onPrint 
+  onPrint,
+  autoPrint = false,
+  autoClose = false 
 }) => {
+  const [printSettings, setPrintSettings] = useState({
+    autoPrint: false,
+    autoClose: false,
+    copies: 1
+  });
+  const [isPrinting, setIsPrinting] = useState(false);
   const formatPrice = (price) => `$${price.toFixed(2)}`;
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString();
   };
 
-  const handlePrint = () => {
-    window.print();
-    if (onPrint) onPrint();
+  const handlePrint = async (copies = 1) => {
+    setIsPrinting(true);
+    
+    try {
+      // Print the specified number of copies
+      for (let i = 0; i < copies; i++) {
+        await new Promise(resolve => {
+          window.print();
+          // Small delay between prints
+          setTimeout(resolve, 500);
+        });
+      }
+      
+      if (onPrint) onPrint();
+      
+      // Auto-close if enabled
+      if (printSettings.autoClose || autoClose) {
+        setTimeout(() => {
+          onClose();
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Print error:', error);
+    } finally {
+      setIsPrinting(false);
+    }
   };
+
+  // Auto-print functionality
+  useEffect(() => {
+    if ((autoPrint || printSettings.autoPrint) && sale) {
+      // Small delay to ensure the component is fully rendered
+      setTimeout(() => {
+        handlePrint(printSettings.copies);
+      }, 500);
+    }
+  }, [sale, autoPrint, printSettings.autoPrint, printSettings.copies]);
 
   const handleDownload = () => {
     // Create a simple text receipt for download
@@ -93,14 +136,62 @@ Thank you for your business!
           <h2 className="text-xl font-semibold text-gray-900 flex items-center">
             <ReceiptIcon className="h-6 w-6 mr-2" />
             Sale Receipt
+            {isPrinting && (
+              <span className="ml-2 text-sm text-blue-600 flex items-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-1"></div>
+                Printing...
+              </span>
+            )}
           </h2>
           <div className="flex items-center space-x-2">
+            {/* Print Options Dropdown */}
+            <div className="relative group">
+              <button className="btn-secondary flex items-center space-x-1">
+                <Settings className="h-4 w-4" />
+                <span>Options</span>
+              </button>
+              <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                <div className="p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700">Auto Print</label>
+                    <input
+                      type="checkbox"
+                      checked={printSettings.autoPrint}
+                      onChange={(e) => setPrintSettings(prev => ({ ...prev, autoPrint: e.target.checked }))}
+                      className="rounded border-gray-300"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700">Auto Close</label>
+                    <input
+                      type="checkbox"
+                      checked={printSettings.autoClose}
+                      onChange={(e) => setPrintSettings(prev => ({ ...prev, autoClose: e.target.checked }))}
+                      className="rounded border-gray-300"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-700">Copies</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="5"
+                      value={printSettings.copies}
+                      onChange={(e) => setPrintSettings(prev => ({ ...prev, copies: parseInt(e.target.value) || 1 }))}
+                      className="w-16 px-2 py-1 text-sm border border-gray-300 rounded"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             <button
-              onClick={handlePrint}
-              className="btn-secondary flex items-center space-x-2"
+              onClick={() => handlePrint(printSettings.copies)}
+              disabled={isPrinting}
+              className="btn-primary flex items-center space-x-2"
             >
               <Printer className="h-4 w-4" />
-              <span>Print</span>
+              <span>{isPrinting ? 'Printing...' : `Print${printSettings.copies > 1 ? ` (${printSettings.copies})` : ''}`}</span>
             </button>
             <button
               onClick={handleDownload}
@@ -286,6 +377,10 @@ Thank you for your business!
             <p className="text-xs text-gray-500 mt-2">
               This receipt was generated on {formatDate(new Date())}
             </p>
+            <div className="mt-4 text-xs text-gray-400">
+              <p>Car Parts Store - Barcode Scanner POS System</p>
+              <p>For support, call (555) 123-4567</p>
+            </div>
           </div>
         </div>
       </div>
@@ -300,11 +395,13 @@ Thank you for your business!
           .receipt-content {
             box-shadow: none !important;
             border: none !important;
+            padding: 20px !important;
           }
           
           body {
             margin: 0;
             padding: 0;
+            font-size: 12px;
           }
           
           .fixed {
@@ -333,6 +430,52 @@ Thank you for your business!
           
           .mb-4 {
             margin-bottom: 0 !important;
+          }
+          
+          /* Optimize for thermal receipt printers */
+          @page {
+            size: 80mm auto;
+            margin: 5mm;
+          }
+          
+          .receipt-content {
+            width: 70mm;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.2;
+          }
+          
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          
+          th, td {
+            padding: 2px 0;
+            text-align: left;
+          }
+          
+          .text-center {
+            text-align: center;
+          }
+          
+          .text-right {
+            text-align: right;
+          }
+        }
+        
+        /* Thermal printer specific styles */
+        @media print and (max-width: 80mm) {
+          .receipt-content {
+            font-size: 10px;
+          }
+          
+          .grid {
+            display: block !important;
+          }
+          
+          .grid > div {
+            margin-bottom: 5px;
           }
         }
       `}</style>

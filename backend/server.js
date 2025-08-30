@@ -13,13 +13,22 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// MongoDB connection
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+// MongoDB connection with fallback to local MongoDB
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/barcode-scanner';
+
+mongoose.connect(MONGODB_URI)
+.then(() => {
+  console.log('MongoDB connected successfully');
+  console.log('Database:', mongoose.connection.name);
 })
-.then(() => console.log('MongoDB connected successfully'))
-.catch((err) => console.error('MongoDB connection error:', err));
+.catch((err) => {
+  console.error('MongoDB connection error:', err);
+  console.log('Falling back to local MongoDB...');
+  // Try local connection as fallback
+  mongoose.connect('mongodb://localhost:27017/barcode-scanner')
+    .then(() => console.log('Connected to local MongoDB'))
+    .catch((localErr) => console.error('Local MongoDB connection failed:', localErr));
+});
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -45,6 +54,28 @@ app.use('*', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// Handle server startup with better error handling
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`📡 API Base URL: http://localhost:${PORT}/api`);
+  console.log(`🔍 Test endpoint: http://localhost:${PORT}/api/products`);
+}).on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`Port ${PORT} is busy, trying port ${PORT + 1}...`);
+    server.listen(PORT + 1, () => {
+      console.log(`🚀 Server is running on port ${PORT + 1}`);
+      console.log(`📡 API Base URL: http://localhost:${PORT + 1}/api`);
+    });
+  } else {
+    console.error('Server startup error:', err);
+  }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Process terminated');
+    mongoose.connection.close();
+  });
 });
