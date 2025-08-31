@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSidebar } from '../App';
 import Sidebar from './Sidebar';
 import { 
   Home, 
@@ -20,9 +21,9 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout, isAuthenticated, isAdmin, isStaff } = useAuth();
+  const { isSidebarOpen, toggleSidebar, closeSidebar } = useSidebar();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(false);
 
   const isActive = (path) => location.pathname === path;
 
@@ -37,9 +38,6 @@ const Navbar = () => {
     setShowMobileMenu(false);
   };
 
-  const toggleSidebar = () => {
-    setShowSidebar(!showSidebar);
-  };
 
   // Don't show navbar on login page
   if (location.pathname === '/login') {
@@ -77,7 +75,7 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-40">
+      <nav className="navbar bg-white shadow-lg border-b border-gray-200 sticky top-0">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           {/* Hamburger Menu and Logo */}
@@ -248,8 +246,8 @@ const Navbar = () => {
       {/* Sidebar */}
       {isAuthenticated() && (isAdmin() || isStaff()) && (
         <Sidebar 
-          isOpen={showSidebar} 
-          onClose={() => setShowSidebar(false)} 
+          isOpen={isSidebarOpen} 
+          onClose={closeSidebar} 
         />
       )}
     </>

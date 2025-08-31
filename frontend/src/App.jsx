@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
@@ -9,10 +9,42 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import StaffDashboard from './pages/StaffDashboard';
 import StaffManagement from './pages/StaffManagement';
+import SaleDetails from './pages/SaleDetails';
 import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ProductProvider } from './context/ProductContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
+
+// Create Sidebar Context
+const SidebarContext = createContext();
+
+export const useSidebar = () => {
+  const context = useContext(SidebarContext);
+  if (!context) {
+    throw new Error('useSidebar must be used within a SidebarProvider');
+  }
+  return context;
+};
+
+const SidebarProvider = ({ children }) => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const closeSidebar = () => setIsSidebarOpen(false);
+  const openSidebar = () => setIsSidebarOpen(true);
+
+  return (
+    <SidebarContext.Provider value={{
+      isSidebarOpen,
+      toggleSidebar,
+      closeSidebar,
+      openSidebar
+    }}>
+      {children}
+    </SidebarContext.Provider>
+  );
+};
 
 // Component to handle root route with role-based redirection
 const RootRoute = () => {
@@ -33,9 +65,32 @@ const RootRoute = () => {
 const MainContent = () => {
   const location = useLocation();
   const isStaffDashboard = location.pathname === '/staff';
+  const { isSidebarOpen } = useSidebar();
+  const { isAuthenticated, isAdmin, isStaff } = useAuth();
+  
+  // Determine if sidebar functionality should be available
+  const shouldShowSidebar = isAuthenticated() && (isAdmin() || isStaff());
+  
+  // Apply main content classes based on sidebar state
+  const getMainContentClasses = () => {
+    let baseClasses = "main-content";
+    
+    if (isStaffDashboard) {
+      baseClasses += " staff-dashboard-main";
+    } else {
+      baseClasses += " container mx-auto px-4 py-8";
+    }
+    
+    // Add sidebar state classes only if sidebar should be shown
+    if (shouldShowSidebar) {
+      baseClasses += isSidebarOpen ? " sidebar-open" : " sidebar-closed";
+    }
+    
+    return baseClasses;
+  };
   
   return (
-    <main className={isStaffDashboard ? "staff-dashboard-main" : "container mx-auto px-4 py-8"}>
+    <main className={getMainContentClasses()}>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<RootRoute />} />
@@ -60,6 +115,16 @@ const MainContent = () => {
           element={
             <ProtectedRoute allowedRoles={["admin", "staff"]}>
               <StaffDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        
+        {/* Sale Details - Admin only access */}
+        <Route 
+          path="/sale-details" 
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <SaleDetails />
             </ProtectedRoute>
           } 
         />
@@ -117,11 +182,15 @@ function App() {
 
   return (
     <AuthProvider>
-      <ProductProvider>
-        <Router>
-          <AppContent />
-        </Router>
-      </ProductProvider>
+      <SettingsProvider>
+        <ProductProvider>
+          <SidebarProvider>
+            <Router>
+              <AppContent />
+            </Router>
+          </SidebarProvider>
+        </ProductProvider>
+      </SettingsProvider>
     </AuthProvider>
   );
 }

@@ -221,8 +221,25 @@ const StaffDashboard = () => {
   const handleCheckout = async (checkoutData) => {
     setIsProcessingSale(true);
     
+    // Enhanced logging for debugging
+    console.log('StaffDashboard handleCheckout called with:', {
+      itemsCount: checkoutData.items?.length,
+      paymentMethod: checkoutData.paymentMethod,
+      totalTax: checkoutData.tax,
+      totalDiscount: checkoutData.discount,
+      checkoutData: checkoutData
+    });
+    
     try {
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      
+      console.log('Making request to:', `${API_BASE_URL}/sales`);
+      console.log('Request headers:', {
+        'Content-Type': 'application/json',
+        ...getAuthHeader()
+      });
+      console.log('Request body:', JSON.stringify(checkoutData, null, 2));
+      
       const response = await fetch(`${API_BASE_URL}/sales`, {
         method: 'POST',
         headers: {
@@ -232,8 +249,13 @@ const StaffDashboard = () => {
         body: JSON.stringify(checkoutData)
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (response.ok) {
         const sale = await response.json();
+        console.log('Sale completed successfully:', sale);
+        
         setCompletedSale(sale);
         setShowReceipt(true);
         clearCart();
@@ -244,12 +266,29 @@ const StaffDashboard = () => {
         
         alert('Sale completed successfully!');
       } else {
-        const data = await response.json();
-        alert(data.message || 'Error processing sale');
+        const errorText = await response.text();
+        console.error('Sale failed with status:', response.status);
+        console.error('Error response body:', errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (parseError) {
+          console.error('Failed to parse error response as JSON:', parseError);
+          errorData = { message: `Server error (${response.status}): ${errorText}` };
+        }
+        
+        const errorMessage = errorData.message || `Error processing sale (${response.status})`;
+        console.error('Displaying error to user:', errorMessage);
+        alert(errorMessage);
       }
     } catch (error) {
-      console.error('Error processing sale:', error);
-      alert('Error processing sale. Please try again.');
+      console.error('Network or other error processing sale:', {
+        message: error.message,
+        stack: error.stack,
+        checkoutData: checkoutData
+      });
+      alert(`Error processing sale: ${error.message}. Please check your connection and try again.`);
     } finally {
       setIsProcessingSale(false);
     }

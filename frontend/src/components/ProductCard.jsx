@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Package, DollarSign, Wrench, Calendar } from 'lucide-react';
+import { useCurrency } from '../hooks/useCurrency';
 
 const ProductCard = ({ product }) => {
   const {
@@ -17,12 +18,7 @@ const ProductCard = ({ product }) => {
     createdAt
   } = product;
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price);
-  };
+  const { format: formatPrice, symbol } = useCurrency();
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -119,7 +115,7 @@ const ProductCard = ({ product }) => {
           {/* Price and Stock */}
           <div className="flex items-center justify-between pt-2 border-t border-gray-100">
             <div className="flex items-center space-x-1">
-              <DollarSign className="h-4 w-4 text-green-600" />
+              <span className="text-green-600 font-bold">{symbol}</span>
               <span className="text-xl font-bold text-green-600">
                 {formatPrice(price)}
               </span>

@@ -18,6 +18,7 @@ import {
   X,
   Minimize2
 } from 'lucide-react';
+import { useCurrency } from '../hooks/useCurrency';
 
 const ShoppingCartComponent = ({ 
   cartItems, 
@@ -153,6 +154,18 @@ const ShoppingCartComponent = ({
       notes: formData.notes || ''
     };
     
+    // Enhanced logging for debugging
+    console.log('Checkout data being sent:', {
+      itemsCount: checkoutData.items.length,
+      paymentMethod: checkoutData.paymentMethod,
+      totalTax: checkoutData.tax,
+      totalDiscount: checkoutData.discount,
+      items: checkoutData.items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity
+      }))
+    });
+    
     onCheckout(checkoutData);
   };
 
@@ -233,9 +246,7 @@ const ShoppingCartComponent = ({
       handlePriceCancel();
     }
   };
-  const formatPrice = (price) => {
-    return `$${price.toFixed(2)}`;
-  };
+  const { format: formatPrice } = useCurrency();
 
   const totals = calculateTotals();
 
@@ -721,7 +732,7 @@ const ShoppingCartComponent = ({
                         className={`input text-xs pl-7 ${errors.discountAmount ? 'border-red-500' : ''}`}
                         placeholder="0.00"
                         min="0"
-                        max={totals.subtotal}
+                        max={calculateTotals().subtotal}
                         step="0.01"
                       />
                     </div>

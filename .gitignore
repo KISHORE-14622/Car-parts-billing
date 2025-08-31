@@ -19,6 +19,12 @@ Thumbs.db
 dist/
 build/
 
-# Optional: lock files (if you don’t want to commit them)
+# IDE/Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Optional: lock files (if you don't want to commit them)
 # package-lock.json
 # yarn.lock

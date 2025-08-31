@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { 
   Settings as SettingsIcon,
   User,
@@ -8,11 +9,14 @@ import {
   Globe,
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  RefreshCw,
+  AlertCircle
 } from 'lucide-react';
 
 const Settings = () => {
   const { user } = useAuth();
+  const { settings, updateSettings, loading, error, getAvailableCurrencies } = useSettings();
   const [activeTab, setActiveTab] = useState('profile');
   const [showPassword, setShowPassword] = useState(false);
   
@@ -41,6 +45,27 @@ const Settings = () => {
     currency: 'USD',
     dateFormat: 'MM/DD/YYYY'
   });
+
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState('');
+
+  // Load settings when component mounts or settings change
+  useEffect(() => {
+    if (settings) {
+      setSystemSettings({
+        language: settings.language || 'en',
+        timezone: settings.timezone || 'UTC',
+        currency: settings.currency || 'USD',
+        dateFormat: settings.dateFormat || 'MM/DD/YYYY'
+      });
+      setNotificationSettings({
+        emailNotifications: settings.emailNotifications ?? true,
+        pushNotifications: settings.pushNotifications ?? false,
+        salesAlerts: settings.salesAlerts ?? true,
+        lowStockAlerts: settings.lowStockAlerts ?? true
+      });
+    }
+  }, [settings]);
 
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
@@ -74,37 +99,132 @@ const Settings = () => {
     }));
   };
 
-  const handleProfileSubmit = (e) => {
+  const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Implement profile update API call
-    alert('Profile updated successfully!');
+    setIsUpdating(true);
+    setUpdateMessage('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          firstName: profileForm.fullName.split(' ')[0],
+          lastName: profileForm.fullName.split(' ').slice(1).join(' ') || profileForm.fullName.split(' ')[0],
+          email: profileForm.email
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setUpdateMessage('Profile updated successfully!');
+        // Update the user context if available
+        setTimeout(() => setUpdateMessage(''), 3000);
+      } else {
+        throw new Error(data.message || 'Failed to update profile');
+      }
+    } catch (err) {
+      setUpdateMessage(`Error: ${err.message}`);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      alert('New passwords do not match!');
+      setUpdateMessage('Error: New passwords do not match!');
       return;
     }
-    // TODO: Implement password update API call
-    alert('Password updated successfully!');
-    setPasswordForm({
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    });
+    
+    setIsUpdating(true);
+    setUpdateMessage('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch('/api/auth/change-password', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        setUpdateMessage('Password updated successfully!');
+        setPasswordForm({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setTimeout(() => setUpdateMessage(''), 3000);
+      } else {
+        throw new Error(data.message || 'Failed to update password');
+      }
+    } catch (err) {
+      setUpdateMessage(`Error: ${err.message}`);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
-  const handleNotificationSubmit = (e) => {
+  const handleNotificationSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Implement notification settings update
-    alert('Notification settings updated successfully!');
+    setIsUpdating(true);
+    setUpdateMessage('');
+    
+    try {
+      const result = await updateSettings(notificationSettings);
+      if (result.success) {
+        setUpdateMessage('Notification settings updated successfully!');
+        setTimeout(() => setUpdateMessage(''), 3000);
+      } else {
+        setUpdateMessage(`Error: ${result.message}`);
+      }
+    } catch (err) {
+      setUpdateMessage(`Error: ${err.message}`);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
-  const handleSystemSubmit = (e) => {
+  const handleSystemSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Implement system settings update
-    alert('System settings updated successfully!');
+    setIsUpdating(true);
+    setUpdateMessage('');
+    
+    try {
+      const result = await updateSettings(systemSettings);
+      if (result.success) {
+        setUpdateMessage('System settings updated successfully!');
+        setTimeout(() => setUpdateMessage(''), 3000);
+      } else {
+        setUpdateMessage(`Error: ${result.message}`);
+      }
+    } catch (err) {
+      setUpdateMessage(`Error: ${err.message}`);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const tabs = [
@@ -113,6 +233,17 @@ const Settings = () => {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'system', label: 'System', icon: Globe }
   ];
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex items-center justify-center py-12">
+          <RefreshCw className="h-8 w-8 animate-spin text-primary-600" />
+          <span className="ml-2 text-lg text-gray-600">Loading settings...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -124,6 +255,26 @@ const Settings = () => {
         </h1>
         <p className="text-gray-600">Manage your account and application preferences</p>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-2">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <span className="text-red-800">{error}</span>
+        </div>
+      )}
+
+      {/* Update Message */}
+      {updateMessage && (
+        <div className={`border rounded-lg p-4 flex items-center space-x-2 ${
+          updateMessage.includes('Error') 
+            ? 'bg-red-50 border-red-200 text-red-800' 
+            : 'bg-green-50 border-green-200 text-green-800'
+        }`}>
+          <AlertCircle className="h-5 w-5" />
+          <span>{updateMessage}</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sidebar Navigation */}
@@ -339,10 +490,15 @@ const Settings = () => {
                     <div className="pt-4">
                       <button
                         type="submit"
+                        disabled={isUpdating}
                         className="btn-primary flex items-center space-x-2"
                       >
-                        <Save className="h-4 w-4" />
-                        <span>Save Preferences</span>
+                        {isUpdating ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4" />
+                        )}
+                        <span>{isUpdating ? 'Saving...' : 'Save Preferences'}</span>
                       </button>
                     </div>
                   </form>
@@ -380,6 +536,7 @@ const Settings = () => {
                         <option value="EST">Eastern Time</option>
                         <option value="PST">Pacific Time</option>
                         <option value="CST">Central Time</option>
+                        <option value="IST">India Standard Time</option>
                       </select>
                     </div>
 
@@ -391,10 +548,14 @@ const Settings = () => {
                         onChange={handleSystemChange}
                         className="input w-full"
                       >
-                        <option value="USD">USD ($)</option>
-                        <option value="EUR">EUR (€)</option>
-                        <option value="GBP">GBP (£)</option>
+                        <option value="USD">USD ($) - US Dollar</option>
+                        <option value="EUR">EUR (€) - Euro</option>
+                        <option value="GBP">GBP (£) - British Pound</option>
+                        <option value="INR">INR (₹) - Indian Rupee</option>
                       </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Changing currency will update all price displays across the application
+                      </p>
                     </div>
 
                     <div>
@@ -414,10 +575,15 @@ const Settings = () => {
                     <div className="pt-4">
                       <button
                         type="submit"
+                        disabled={isUpdating}
                         className="btn-primary flex items-center space-x-2"
                       >
-                        <Save className="h-4 w-4" />
-                        <span>Save Settings</span>
+                        {isUpdating ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4" />
+                        )}
+                        <span>{isUpdating ? 'Saving...' : 'Save Settings'}</span>
                       </button>
                     </div>
                   </form>

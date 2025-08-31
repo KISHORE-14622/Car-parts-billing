@@ -367,6 +367,67 @@ body.staff-dashboard-active nav {
   overflow: hidden;
 }
 
+/* Sidebar Layout Styles */
+.sidebar-overlay {
+  @apply fixed inset-0 bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out;
+  z-index: 60;
+}
+
+.sidebar-container {
+  @apply fixed top-0 left-0 h-full w-64 bg-white shadow-2xl transform transition-transform duration-300 ease-in-out;
+  z-index: 70;
+}
+
+.sidebar-open .sidebar-container {
+  @apply translate-x-0;
+}
+
+.sidebar-closed .sidebar-container {
+  @apply -translate-x-full;
+}
+
+/* Main content adjustment when sidebar is open */
+.main-content {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+.main-content.sidebar-open {
+  @apply ml-64;
+}
+
+.main-content.sidebar-closed {
+  @apply ml-0;
+}
+
+/* Body scroll prevention when sidebar is open */
+body.sidebar-open {
+  @apply overflow-hidden;
+}
+
+/* Z-index hierarchy */
+.navbar {
+  z-index: 50;
+}
+
+.sidebar-overlay {
+  z-index: 60;
+}
+
+.sidebar-container {
+  z-index: 70;
+}
+
+/* Mobile responsive sidebar */
+@media (max-width: 1024px) {
+  .main-content.sidebar-open {
+    @apply ml-0;
+  }
+  
+  .sidebar-container {
+    @apply w-64;
+  }
+}
+
 /* Responsive enhancements */
 @media (max-width: 768px) {
   .card:hover {
@@ -375,5 +436,9 @@ body.staff-dashboard-active nav {
   
   .btn:hover {
     transform: none;
+  }
+  
+  .sidebar-container {
+    @apply w-full max-w-sm;
   }
 }

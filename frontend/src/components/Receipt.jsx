@@ -11,6 +11,7 @@ import {
   Check,
   Settings
 } from 'lucide-react';
+import { useCurrency } from '../hooks/useCurrency';
 
 const Receipt = ({ 
   sale, 
@@ -25,7 +26,7 @@ const Receipt = ({
     copies: 1
   });
   const [isPrinting, setIsPrinting] = useState(false);
-  const formatPrice = (price) => `$${price.toFixed(2)}`;
+  const { format: formatPrice } = useCurrency();
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString();
   };
